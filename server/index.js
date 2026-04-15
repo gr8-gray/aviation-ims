@@ -37,8 +37,8 @@ app.use('/api/requisitions', require('./routes/requisitions'));
 app.use('/api/inventory', require('./routes/inventory'));
 // app.use('/api/requisitions', require('./routes/requisitions'));
 app.use('/api/aircraft', require('./routes/aircraft'));
-// app.use('/api/users', require('./routes/users'));
-// app.use('/api/reports', require('./routes/reports'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/reports', require('./routes/reports'));
 
 // 404 and error handlers
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
