@@ -33,6 +33,7 @@ app.get('/health', async (req, res) => {
 
 // API routes
 app.use('/api/parts', require('./routes/parts'));
+app.use('/api/requisitions', require('./routes/requisitions'));
 // app.use('/api/inventory', require('./routes/inventory'));
 // app.use('/api/requisitions', require('./routes/requisitions'));
 // app.use('/api/aircraft', require('./routes/aircraft'));
