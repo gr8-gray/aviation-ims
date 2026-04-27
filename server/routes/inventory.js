@@ -240,10 +240,10 @@ router.post('/turn-in', async (req, res) => {
 
     const tx = await client.query(
       `INSERT INTO transactions
-         (type, nsn, aircraft_id, jcn, unit_id, performed_by, quantity, condition_in, condition_out, notes)
-       VALUES ('turn_in',$1,$2,$3,$4,$5,$6,$7,$7,$8)
+         (type, nsn, aircraft_id, jcn, unit_id, performed_by, quantity, condition_in, condition_out, notes, disposition)
+       VALUES ('turn_in',$1,$2,$3,$4,$5,$6,$7,$7,$8,$9)
        RETURNING *`,
-      [nsn, aircraft_id, jcn, req.user.unit_id, req.user.user_id, parseInt(quantity), condition, notes]
+      [nsn, aircraft_id, jcn, req.user.unit_id, req.user.user_id, parseInt(quantity), condition, notes, disposition]
     );
 
     await client.query('COMMIT');
@@ -519,6 +519,58 @@ router.post('/adjustment', async (req, res) => {
     res.status(500).json({ error: 'Adjustment failed' });
   } finally {
     client.release();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/inventory/part-history/:nsn
+// Transaction history for a given NSN scoped to the user's unit.
+// ---------------------------------------------------------------------------
+router.get('/part-history/:nsn', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.transaction_id, t.type, t.quantity, t.condition_in, t.condition_out,
+              t.jcn, t.mcn, t.document_number, t.notes, t.created_at,
+              u.name AS performed_by_name,
+              a.buno
+       FROM transactions t
+       LEFT JOIN users u    ON u.user_id    = t.performed_by
+       LEFT JOIN aircraft a ON a.aircraft_id = t.aircraft_id
+       WHERE t.nsn = $1 AND t.unit_id = $2
+       ORDER BY t.created_at DESC
+       LIMIT 100`,
+      [req.params.nsn.toUpperCase(), req.user.unit_id]
+    );
+    res.json({ transactions: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('GET /api/inventory/part-history/:nsn error:', err);
+    res.status(500).json({ error: 'Failed to fetch part history' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/inventory/drmo
+// Parts routed to DRMO — turn_in transactions where disposition='drmo'.
+// ---------------------------------------------------------------------------
+router.get('/drmo', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.*,
+              pm.description,
+              pm.unit_of_issue,
+              pm.unit_price
+       FROM transactions t
+       LEFT JOIN parts_master pm ON pm.nsn = t.nsn
+       WHERE t.unit_id = $1
+         AND t.type = 'turn_in'
+         AND t.disposition = 'drmo'
+       ORDER BY t.created_at DESC`,
+      [req.user.unit_id]
+    );
+    res.json({ items: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('GET /api/inventory/drmo error:', err);
+    res.status(500).json({ error: 'Failed to fetch DRMO queue' });
   }
 });
 

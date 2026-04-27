@@ -13,6 +13,7 @@
  *   GET /api/reports/usage-trends     Top consumed parts by time period
  *   GET /api/reports/parts-cost-jcn   Parts cost per JCN
  *   GET /api/reports/tat              Req submission→receipt turnaround
+ *   GET /api/reports/awop             Aircraft awaiting parts — AWOP status board
  */
 
 const express = require('express');
@@ -48,6 +49,7 @@ router.get('/nmcs-brief', async (req, res) => {
          ne.jcn,
          ne.opened_at,
          ROUND(EXTRACT(EPOCH FROM (NOW() - ne.opened_at))/86400) AS days_open,
+         r.req_id,
          r.document_number,
          r.status        AS req_status,
          r.priority,
@@ -329,6 +331,65 @@ router.get('/tat', async (req, res) => {
   } catch (err) {
     console.error('GET /api/reports/tat error:', err);
     res.status(500).json({ error: 'Failed to generate TAT report' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/reports/awop
+// Aircraft Awaiting Parts (AWOP) status board.
+// Shows every open NMCS event grouped by aircraft, with causative NSN,
+// document number, requisition status, priority, and days down.
+// Sorted worst-first (most days down).
+// ---------------------------------------------------------------------------
+router.get('/awop', async (req, res) => {
+  try {
+    const unitId = unitScope(req);
+    const result = await pool.query(
+      `SELECT
+         ne.event_id,
+         a.buno,
+         a.mds,
+         ne.nsn,
+         pm.description            AS part_description,
+         ne.jcn,
+         ne.opened_at,
+         ROUND(EXTRACT(EPOCH FROM (NOW() - ne.opened_at))/86400) AS days_down,
+         r.document_number,
+         r.status                  AS req_status,
+         r.priority,
+         r.quantity,
+         r.fund_code,
+         r.ots_last_sync,
+         u.name                    AS opened_by_name
+       FROM nmcs_events ne
+       JOIN aircraft a      ON a.aircraft_id  = ne.aircraft_id
+       JOIN parts_master pm ON pm.nsn          = ne.nsn
+       JOIN users u         ON u.user_id       = ne.opened_by
+       LEFT JOIN requisitions r ON r.req_id    = ne.req_id
+       WHERE a.unit_id = $1
+         AND ne.closed_at IS NULL
+         AND ne.type = 'NMCS'
+       ORDER BY days_down DESC`,
+      [unitId]
+    );
+
+    const aircraft_awop = [...new Set(result.rows.map(r => r.buno))].length;
+    const avg_days = result.rows.length
+      ? Math.round(result.rows.reduce((s, r) => s + Number(r.days_down), 0) / result.rows.length)
+      : 0;
+    const no_req = result.rows.filter(r => !r.document_number).length;
+
+    res.json({
+      events:        result.rows,
+      count:         result.rows.length,
+      aircraft_awop,
+      avg_days,
+      no_req,
+      generated_at:  new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('GET /api/reports/awop error:', err);
+    res.status(500).json({ error: 'Failed to generate AWOP report' });
   }
 });
 

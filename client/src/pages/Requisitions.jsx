@@ -7,7 +7,7 @@ function StatusBadge({ status }) {
 }
 
 function SubmitModal({ onClose, onSuccess }) {
-  const [form, setForm] = useState({ nsn:'', quantity:1, priority:'03', fund_code:'', jcn:'', mcn:'', aircraft_id:'' })
+  const [form, setForm] = useState({ nsn:'', quantity:1, priority:'03', fund_code:'KB', jcn:'', mcn:'', aircraft_id:'' })
   const [loading, setLoading] = useState(false)
   const [result,  setResult]  = useState(null)
   const [error,   setError]   = useState(null)
@@ -81,8 +81,8 @@ function SubmitModal({ onClose, onSuccess }) {
                 </select>
               </div>
               <div className="form-group">
-                <label>Fund Code *</label>
-                <input value={form.fund_code} onChange={e=>set('fund_code',e.target.value)} placeholder="e.g. FB" maxLength={2} required />
+                <label>Fund Code</label>
+                <input value={form.fund_code} disabled style={{color:'var(--text-dim)'}} />
               </div>
               <div className="form-group">
                 <label>JCN</label>
@@ -110,11 +110,124 @@ function SubmitModal({ onClose, onSuccess }) {
   )
 }
 
+// ── MOV Review Overlay ───────────────────────────────────────────────────────
+function MovOverlay({ onClose }) {
+  const [candidates, setCandidates] = useState([])
+  const [selected,   setSelected]   = useState(new Set())
+  const [loading,    setLoading]    = useState(true)
+  const [acting,     setActing]     = useState(false)
+  const [result,     setResult]     = useState(null)
+  const [error,      setError]      = useState(null)
+
+  useEffect(() => {
+    reqs.mov()
+      .then(r => setCandidates(r.data?.requisitions || []))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  function toggleAll() {
+    if (selected.size === candidates.length) setSelected(new Set())
+    else setSelected(new Set(candidates.map(r => r.req_id)))
+  }
+
+  function toggle(id) {
+    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  async function bulk(action) {
+    const ids = selected.size ? [...selected] : candidates.map(r => r.req_id)
+    if (!ids.length) return
+    setActing(true); setError(null)
+    try {
+      const res = await reqs.movBulk({ action, req_ids: ids })
+      setResult(res.data)
+      if (action === 'cancel') setCandidates(c => c.filter(r => !ids.includes(r.req_id)))
+      if (action === 'validate') {
+        setCandidates(c => c.map(r => ids.includes(r.req_id) ? {...r, mov_validated_at: new Date().toISOString()} : r))
+      }
+      setSelected(new Set())
+    } catch(e) { setError(e.message) } finally { setActing(false) }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div style={{
+        background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)',
+        width:'min(900px,95vw)', maxHeight:'85vh', display:'flex', flexDirection:'column',
+        overflow:'hidden'
+      }} onClick={e=>e.stopPropagation()}>
+
+        <div className="modal-header">
+          <div>
+            <span className="modal-title">MOV Review — Material Obligation Validation</span>
+            <div className="text-dim" style={{fontSize:11,marginTop:2}}>
+              Pri 01/02 &gt; 5 days · Pri 03/04 &gt; 30 days · Validate (still needed) or Cancel (AC1)
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+
+        {error  && <div className="error-banner" style={{margin:'8px 16px'}}>{error}</div>}
+        {result && <div className="success-banner" style={{margin:'8px 16px'}}>{result.message}{result.milstrips?.length ? ` — ${result.milstrips.length} AC1(s) generated` : ''}</div>}
+
+        <div style={{flex:1,overflowY:'auto'}}>
+          {loading ? <div className="loading">Loading…</div>
+          : !candidates.length ? (
+            <div className="empty"><span className="empty-icon">✅</span><div className="empty-text">No reqs require MOV action</div></div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" checked={selected.size===candidates.length&&candidates.length>0} onChange={toggleAll} /></th>
+                  <th>Doc Number</th><th>NSN</th><th>Description</th>
+                  <th>Pri</th><th>Status</th><th>Age</th><th>MOV Due</th><th>Validated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {candidates.map(r => (
+                  <tr key={r.req_id} style={{background: r.mov_due && !r.mov_validated_at ? 'rgba(239,68,68,0.04)' : undefined}}>
+                    <td><input type="checkbox" checked={selected.has(r.req_id)} onChange={()=>toggle(r.req_id)} /></td>
+                    <td className="td-mono">{r.document_number}</td>
+                    <td className="td-mono">{r.nsn}</td>
+                    <td style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.description}</td>
+                    <td><span className={`pri pri-${r.priority}`}>{r.priority}</span></td>
+                    <td><StatusBadge status={r.status} /></td>
+                    <td className={Number(r.age_days)>30?'text-red fw-600':'td-primary'}>{r.age_days}d</td>
+                    <td>{r.mov_due ? <span className="badge badge-red">DUE</span> : <span className="text-dim">—</span>}</td>
+                    <td className="text-dim" style={{fontSize:11}}>
+                      {r.mov_validated_at ? new Date(r.mov_validated_at).toLocaleDateString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="modal-footer" style={{borderTop:'1px solid var(--border)',padding:'12px 20px'}}>
+          <span className="text-dim" style={{fontSize:12,flex:1}}>
+            {selected.size > 0 ? `${selected.size} selected` : `${candidates.length} candidates — select rows or use buttons below to act on all`}
+          </span>
+          <button className="btn btn-secondary" onClick={()=>bulk('validate')} disabled={acting||!candidates.length}>
+            {acting?'…':'✓ Validate'} {selected.size?`(${selected.size})`:'All'}
+          </button>
+          <button className="btn btn-secondary" style={{color:'var(--red)'}} onClick={()=>bulk('cancel')} disabled={acting||!candidates.length}>
+            {acting?'…':'✕ Cancel'} {selected.size?`(${selected.size})`:'All'} — AC1
+          </button>
+          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Requisitions() {
   const [data,    setData]    = useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
   const [showNew, setShowNew] = useState(false)
+  const [showMov, setShowMov] = useState(false)
   const [filter,  setFilter]  = useState({ status: '', priority: '' })
   const [action,  setAction]  = useState({}) // { id, type, loading, result, error }
 
@@ -154,6 +267,7 @@ export default function Requisitions() {
   return (
     <>
       {showNew && <SubmitModal onClose={() => setShowNew(false)} onSuccess={load} />}
+      {showMov && <MovOverlay onClose={() => setShowMov(false)} />}
 
       {/* MILSTRIP result overlay */}
       {action.result && (
@@ -191,6 +305,7 @@ export default function Requisitions() {
             <option value="03">03 — Routine</option>
           </select>
         </div>
+        <button className="btn btn-secondary" onClick={() => setShowMov(true)}>MOV Review</button>
         <button className="btn btn-primary" onClick={() => setShowNew(true)}>+ New Req</button>
       </div>
 

@@ -542,4 +542,98 @@ router.put('/:id/status', requireRole(['officer', 'admin', 'sncoic']), async (re
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/requisitions/mov
+// MOV candidates — open reqs past age thresholds, not yet validated.
+// Pri 01/02 > 5 days · Pri 03/04 > 30 days
+// ---------------------------------------------------------------------------
+router.get('/mov', async (req, res) => {
+  try {
+    const unitId = req.user.unit_id;
+    const result = await pool.query(
+      `SELECT r.*,
+              pm.description, pm.unit_of_issue, pm.unit_price,
+              a.buno,
+              ROUND(EXTRACT(EPOCH FROM (NOW() - r.created_at))/86400) AS age_days,
+              CASE
+                WHEN r.priority IN ('01','02') AND EXTRACT(EPOCH FROM (NOW()-r.created_at))/86400 > 5  THEN true
+                WHEN r.priority IN ('03','04') AND EXTRACT(EPOCH FROM (NOW()-r.created_at))/86400 > 30 THEN true
+                ELSE false
+              END AS mov_due
+       FROM requisitions r
+       JOIN parts_master pm ON pm.nsn = r.nsn
+       LEFT JOIN aircraft a  ON a.aircraft_id = r.aircraft_id
+       WHERE r.unit_id = $1
+         AND r.status NOT IN ('received','cancelled')
+         AND (
+           (r.priority IN ('01','02') AND EXTRACT(EPOCH FROM (NOW()-r.created_at))/86400 > 5)
+           OR
+           (r.priority IN ('03','04') AND EXTRACT(EPOCH FROM (NOW()-r.created_at))/86400 > 30)
+         )
+       ORDER BY r.priority, age_days DESC`,
+      [unitId]
+    );
+    res.json({ requisitions: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('GET /api/requisitions/mov error:', err);
+    res.status(500).json({ error: 'Failed to fetch MOV candidates' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/requisitions/mov-bulk
+// Bulk MOV action — validate or cancel selected reqs.
+// Body: { action: 'validate' | 'cancel', req_ids: [1,2,...] }
+// ---------------------------------------------------------------------------
+router.post('/mov-bulk', requireRole(['officer','admin','sncoic']), async (req, res) => {
+  const { action, req_ids } = req.body;
+  if (!['validate','cancel'].includes(action)) return res.status(400).json({ error: 'action must be validate or cancel' });
+  if (!Array.isArray(req_ids) || !req_ids.length) return res.status(400).json({ error: 'req_ids array required' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let processed = 0;
+    const milstrips = [];
+
+    for (const id of req_ids) {
+      if (action === 'validate') {
+        await client.query(
+          `UPDATE requisitions SET mov_validated_at=NOW(), mov_validated_by=$1, updated_at=NOW()
+           WHERE req_id=$2 AND unit_id=$3 AND status NOT IN ('received','cancelled')`,
+          [req.user.user_id, parseInt(id), req.user.unit_id]
+        );
+      } else {
+        const r = await client.query(
+          `SELECT r.*, u.uic FROM requisitions r JOIN units u ON u.unit_id=r.unit_id
+           WHERE r.req_id=$1 AND r.unit_id=$2 AND r.status NOT IN ('received','cancelled')`,
+          [parseInt(id), req.user.unit_id]
+        );
+        if (!r.rows.length) continue;
+        const req_ = r.rows[0];
+        const ac1 = milstrip.generateAC1({ nsn: req_.nsn, quantity: req_.quantity, priority: req_.priority, fundCode: req_.fund_code, documentNumber: req_.document_number });
+        milstrips.push(ac1);
+        await client.query(
+          `UPDATE requisitions SET status='cancelled', type='AC1', updated_at=NOW() WHERE req_id=$1`,
+          [parseInt(id)]
+        );
+        await client.query(
+          `UPDATE inventory SET qty_on_order=GREATEST(0,qty_on_order-$1), updated_at=NOW() WHERE nsn=$2 AND unit_id=$3`,
+          [req_.quantity, req_.nsn, req_.unit_id]
+        );
+      }
+      processed++;
+    }
+
+    await client.query('COMMIT');
+    res.json({ processed, action, milstrips, message: `${action === 'validate' ? 'Validated' : 'Cancelled'} ${processed} requisition(s)` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('POST /api/requisitions/mov-bulk error:', err);
+    res.status(500).json({ error: 'MOV bulk action failed' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

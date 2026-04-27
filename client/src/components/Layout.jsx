@@ -9,6 +9,7 @@ const NAV = [
     { to: '/requisitions', label: 'Requisitions', icon: '📋', badge: 'reqs' },
     { to: '/aircraft',     label: 'Aircraft',     icon: '✈️',  badge: 'nmcs' },
     { to: '/parts',        label: 'Parts DB',     icon: '🔩' },
+    { to: '/repairables',  label: 'Repairables',  icon: '🔧' },
   ]},
   { section: 'Analysis', items: [
     { to: '/reports',      label: 'Reports',      icon: '📊' },
@@ -26,6 +27,7 @@ const PAGE_TITLES = {
   '/parts':        'Parts Catalog',
   '/reports':      'Reports',
   '/admin':        'Administration',
+  '/repairables':  'Repairables & DIFM',
 }
 
 export default function Layout() {
