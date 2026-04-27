@@ -46,12 +46,16 @@ export const inventory = {
   exchange:  (data)   => api.post('/api/inventory/repairable-exchange', data),
   transfer:  (data)   => api.post('/api/inventory/transfer', data),
   adjust:    (data)   => api.post('/api/inventory/adjustment', data),
-  icrl:      (nsn)    => api.get(`/api/inventory/icrl/${nsn}`),
-  icrlUpload:(data)   => api.post('/api/inventory/icrl', data),
+  icrl:        (nsn)    => api.get(`/api/inventory/icrl/${nsn}`),
+  icrlUpload:  (data)   => api.post('/api/inventory/icrl', data),
+  partHistory: (nsn)    => api.get(`/api/inventory/part-history/${nsn}`),
+  drmo:        ()        => api.get('/api/inventory/drmo'),
 };
 
 // --- Requisitions ---
 export const reqs = {
+  mov:        ()           => api.get('/api/requisitions/mov'),
+  movBulk:    (data)       => api.post('/api/requisitions/mov-bulk', data),
   list:     (params) => api.get('/api/requisitions', { params }),
   get:      (id)     => api.get(`/api/requisitions/${id}`),
   submit:   (data)   => api.post('/api/requisitions', data),
@@ -84,6 +88,22 @@ export const reports = {
   usageTrends:   (params) => api.get('/api/reports/usage-trends', { params }),
   costByJcn:     (params) => api.get('/api/reports/parts-cost-jcn', { params }),
   tat:           (params) => api.get('/api/reports/tat', { params }),
+  awop:          (params) => api.get('/api/reports/awop', { params }),
+};
+
+// --- Repairables ---
+export const repairables = {
+  serialized:   (params)    => api.get('/api/repairables/serialized', { params }),
+  addSerialized:(data)       => api.post('/api/repairables/serialized', data),
+  updateItem:   (id, data)   => api.put(`/api/repairables/serialized/${id}`, data),
+  difm:         (params)    => api.get('/api/repairables/difm', { params }),
+  sendToShop:   (data)       => api.post('/api/repairables/difm', data),
+  receiveBack:  (id, data)   => api.put(`/api/repairables/difm/${id}/receive`, data),
+  routing:      (pn)         => api.get(`/api/repairables/routing/${encodeURIComponent(pn)}`),
+  icrl:         ()           => api.get('/api/repairables/icrl'),
+  icrlUpload:   (file)       => { const fd = new FormData(); fd.append('file', file); return api.post('/api/repairables/icrl/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); },
+  crl:          ()           => api.get('/api/repairables/crl'),
+  crlUpload:    (file)       => { const fd = new FormData(); fd.append('file', file); return api.post('/api/repairables/crl/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); },
 };
 
 // --- Users ---

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { reports } from '../api.js'
+import { reports, reqs } from '../api.js'
 
 const REPORT_LIST = [
   { key: 'nmcs',   label: 'NMCS Brief',           desc: 'All open NMCS/PMCS — daily Supply Officer brief' },
@@ -8,6 +8,7 @@ const REPORT_LIST = [
   { key: 'usage',  label: 'Usage Trends',          desc: 'Top consumed parts by quantity issued' },
   { key: 'jcn',    label: 'Parts Cost by JCN',     desc: 'Total parts value per maintenance job' },
   { key: 'tat',    label: 'Turnaround Time (TAT)', desc: 'Req submission → receipt by priority and NSN' },
+  { key: 'awop',  label: 'AWOP Status Board',     desc: 'Aircraft awaiting parts — causative NSN, document number, days down' },
 ]
 
 function NmcsBrief({ data }) {
@@ -142,7 +143,73 @@ function TatReport({ data }) {
   )
 }
 
-const RENDERERS = { nmcs: NmcsBrief, open: OpenDocs, stock: StockStatus, usage: UsageTrends, jcn: CostByJcn, tat: TatReport }
+function AwopBoard({ data }) {
+  const [followupResults, setFollowupResults] = useState({})
+  const [loading, setLoading] = useState({})
+
+  async function expedite(e) {
+    if (!e.req_id) return
+    setLoading(l => ({...l, [e.event_id]: true}))
+    try {
+      const res = await reqs.followup(e.req_id)
+      setFollowupResults(r => ({...r, [e.event_id]: res.data}))
+    } catch(err) {
+      setFollowupResults(r => ({...r, [e.event_id]: { error: err.message }}))
+    } finally {
+      setLoading(l => ({...l, [e.event_id]: false}))
+    }
+  }
+
+  if (!data?.events?.length) return <div className="empty"><span className="empty-icon">✅</span><div className="empty-text">No aircraft awaiting parts</div></div>
+  return (
+    <>
+      <div style={{display:'flex',gap:16,padding:'12px 20px',borderBottom:'1px solid var(--border)'}}>
+        <div className="stat-pill"><span className="stat-num text-red">{data.aircraft_awop}</span><span className="text-dim">AWOP Aircraft</span></div>
+        <div className="stat-pill"><span className="stat-num">{data.count}</span><span className="text-dim">Open Events</span></div>
+        <div className="stat-pill"><span className="stat-num">{data.avg_days}d</span><span className="text-dim">Avg Days Down</span></div>
+        {data.no_req > 0 && <div className="stat-pill"><span className="stat-num text-red">{data.no_req}</span><span className="text-dim">No Req Filed</span></div>}
+      </div>
+      <table>
+        <thead><tr><th>BUNO</th><th>MDS</th><th>Part</th><th>NSN</th><th>JCN</th><th>Days Down</th><th>Doc Number</th><th>Pri</th><th>Req Status</th><th></th></tr></thead>
+        <tbody>
+          {data.events.map(e => (
+            <>
+              <tr key={e.event_id}>
+                <td className="td-mono td-primary">{e.buno}</td>
+                <td>{e.mds}</td>
+                <td style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.part_description}</td>
+                <td className="td-mono">{e.nsn}</td>
+                <td className="td-mono">{e.jcn||'—'}</td>
+                <td className={Number(e.days_down)>5?'text-red fw-600':'td-primary'}>{e.days_down}d</td>
+                <td>{e.document_number ? <span className="td-mono">{e.document_number}</span> : <span className="badge badge-red">NO REQ</span>}</td>
+                <td>{e.priority ? <span className={`pri pri-${e.priority}`}>{e.priority}</span> : <span className="text-dim">—</span>}</td>
+                <td>{e.req_status ? <span className="badge badge-blue">{e.req_status}</span> : <span className="text-dim">—</span>}</td>
+                <td>
+                  {e.req_id && !followupResults[e.event_id] && (
+                    <button className="btn btn-ghost btn-sm" onClick={()=>expedite(e)} disabled={loading[e.event_id]}>
+                      {loading[e.event_id] ? '…' : 'Follow Up'}
+                    </button>
+                  )}
+                  {followupResults[e.event_id]?.milstrip && <span className="badge badge-green">AP1 Sent</span>}
+                  {followupResults[e.event_id]?.error && <span className="badge badge-red">Error</span>}
+                </td>
+              </tr>
+              {followupResults[e.event_id]?.milstrip && (
+                <tr key={`${e.event_id}-ap1`}>
+                  <td colSpan={10} style={{padding:'4px 12px 8px',background:'var(--bg)'}}>
+                    <pre className="milstrip-pre" style={{maxHeight:60,fontSize:11}}>{followupResults[e.event_id].milstrip}</pre>
+                  </td>
+                </tr>
+              )}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+const RENDERERS = { nmcs: NmcsBrief, open: OpenDocs, stock: StockStatus, usage: UsageTrends, jcn: CostByJcn, tat: TatReport, awop: AwopBoard }
 
 export default function Reports() {
   const [active,  setActive]  = useState('nmcs')
@@ -161,6 +228,7 @@ export default function Reports() {
         usage: () => reports.usageTrends({ days }),
         jcn:   () => reports.costByJcn({ days }),
         tat:   () => reports.tat({ days }),
+        awop:  () => reports.awop(),
       }
       const res = await fetchers[key]()
       setData(d => ({ ...d, [key]: res.data }))

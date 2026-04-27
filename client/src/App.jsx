@@ -7,6 +7,7 @@ import Requisitions from './pages/Requisitions.jsx'
 import Aircraft     from './pages/Aircraft.jsx'
 import Reports      from './pages/Reports.jsx'
 import Admin        from './pages/Admin.jsx'
+import Repairables  from './pages/Repairables.jsx'
 
 export default function App() {
   return (
@@ -18,7 +19,8 @@ export default function App() {
         <Route path="requisitions" element={<Requisitions />} />
         <Route path="aircraft"   element={<Aircraft />} />
         <Route path="reports"    element={<Reports />} />
-        <Route path="admin"      element={<Admin />} />
+        <Route path="admin"       element={<Admin />} />
+        <Route path="repairables" element={<Repairables />} />
         <Route path="*"          element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

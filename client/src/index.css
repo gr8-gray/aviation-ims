@@ -233,3 +233,5 @@ select option { background: var(--bg-surface); }
 .mt-2 { margin-top: 8px; }
 .mb-2 { margin-bottom: 8px; }
 .milstrip-pre { font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; color: var(--green); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+.stat-pill { display: flex; flex-direction: column; align-items: center; padding: 6px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); min-width: 80px; }
+.stat-num  { font-size: 20px; font-weight: 700; line-height: 1.2; color: var(--text); }
