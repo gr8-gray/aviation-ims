@@ -234,17 +234,17 @@ async function seed() {
     console.log('  → Requisitions...');
     const reqData = [
       // NMCS — priority 01, engine bearing grounded 166490
-      { docnum: docnum(1, 18), type:'A0A', nsn:'2840018374920', acBuno:'166490', jcn:'VMM365-2024-0892', priority:'01', fund_code:'FB', status:'backordered', qty:1, daysAgo:18 },
+      { docnum: docnum(1, 18), type:'A0A', nsn:'2840018374920', acBuno:'166490', jcn:'VMM365-26-0892', priority:'01', fund_code:'FB', status:'backordered', qty:1, daysAgo:18 },
       // PMCS — priority 02, hydraulic coupling
-      { docnum: docnum(2, 12), type:'A0A', nsn:'4730014482680', acBuno:'168019', jcn:'VMM365-2024-0910', priority:'02', fund_code:'FB', status:'due_in',     qty:2, daysAgo:12 },
+      { docnum: docnum(2, 12), type:'A0A', nsn:'4730014482680', acBuno:'168019', jcn:'VMM365-26-0910', priority:'02', fund_code:'FB', status:'due_in',     qty:2, daysAgo:12 },
       // Routine — fuel filter
-      { docnum: docnum(3,  8), type:'A0A', nsn:'2915011234567', acBuno:'168661', jcn:'VMM365-2024-0931', priority:'03', fund_code:'FB', status:'submitted',  qty:2, daysAgo:8  },
+      { docnum: docnum(3,  8), type:'A0A', nsn:'2915011234567', acBuno:'168661', jcn:'VMM365-26-0931', priority:'03', fund_code:'FB', status:'submitted',  qty:2, daysAgo:8  },
       // Routine — O-rings (low stock)
       { docnum: docnum(4,  5), type:'A0A', nsn:'5330005892341', acBuno:null,     jcn:null,              priority:'03', fund_code:'FC', status:'submitted',  qty:10,daysAgo:5  },
       // Relay — backordered
-      { docnum: docnum(5, 22), type:'AP1', nsn:'5945002938471', acBuno:'169017', jcn:'VMM365-2024-0841', priority:'01', fund_code:'FB', status:'backordered', qty:1, daysAgo:22 },
+      { docnum: docnum(5, 22), type:'AP1', nsn:'5945002938471', acBuno:'169017', jcn:'VMM365-26-0841', priority:'01', fund_code:'FB', status:'backordered', qty:1, daysAgo:22 },
       // Connector — shipped
-      { docnum: docnum(6, 31), type:'A0A', nsn:'5975013847291', acBuno:'168019', jcn:'VMM365-2024-0801', priority:'02', fund_code:'FB', status:'shipped',    qty:1, daysAgo:31 },
+      { docnum: docnum(6, 31), type:'A0A', nsn:'5975013847291', acBuno:'168019', jcn:'VMM365-26-0801', priority:'02', fund_code:'FB', status:'shipped',    qty:1, daysAgo:31 },
       // Received
       { docnum: docnum(7, 45), type:'A0A', nsn:'9150014728391', acBuno:null,     jcn:null,              priority:'03', fund_code:'FC', status:'received',   qty:4, daysAgo:45 },
     ];
@@ -275,7 +275,7 @@ async function seed() {
       const nmcsReqId = reqIds[docnum(1, 18)];
       await client.query(
         `INSERT INTO nmcs_events (aircraft_id, nsn, req_id, jcn, type, opened_by, opened_at)
-         VALUES ($1,'2840018374920',$2,'VMM365-2024-0892','NMCS',$3,NOW() - INTERVAL '18 days')
+         VALUES ($1,'2840018374920',$2,'VMM365-26-0892','NMCS',$3,NOW() - INTERVAL '18 days')
          ON CONFLICT DO NOTHING`,
         [acIds['166490'], nmcsReqId || null, devUserId]
       );
@@ -284,7 +284,7 @@ async function seed() {
       const pmcsReqId = reqIds[docnum(5, 22)];
       await client.query(
         `INSERT INTO nmcs_events (aircraft_id, nsn, req_id, jcn, type, opened_by, opened_at)
-         VALUES ($1,'5945002938471',$2,'VMM365-2024-0841','PMCS',$3,NOW() - INTERVAL '22 days')
+         VALUES ($1,'5945002938471',$2,'VMM365-26-0841','PMCS',$3,NOW() - INTERVAL '22 days')
          ON CONFLICT DO NOTHING`,
         [acIds['169017'], pmcsReqId || null, devUserId]
       );
@@ -294,17 +294,17 @@ async function seed() {
     // 10. Transaction history — issue history for usage trends / JCN cost
     console.log('  → Transaction history...');
     const txData = [
-      { type:'issue',   nsn:'2915011234567', buno:'168661', jcn:'VMM365-2024-0931', qty:1, daysAgo:8  },
-      { type:'issue',   nsn:'4730014482680', buno:'168019', jcn:'VMM365-2024-0910', qty:1, daysAgo:12 },
-      { type:'issue',   nsn:'9150014728391', buno:'166490', jcn:'VMM365-2024-0820', qty:2, daysAgo:30 },
-      { type:'issue',   nsn:'5365001849302', buno:'168661', jcn:'VMM365-2024-0931', qty:4, daysAgo:8  },
-      { type:'issue',   nsn:'5340001023847', buno:'169017', jcn:'VMM365-2024-0841', qty:6, daysAgo:20 },
-      { type:'issue',   nsn:'2915011234567', buno:'169354', jcn:'VMM365-2024-0788', qty:1, daysAgo:45 },
-      { type:'issue',   nsn:'9150014728391', buno:'168661', jcn:'VMM365-2024-0756', qty:4, daysAgo:60 },
+      { type:'issue',   nsn:'2915011234567', buno:'168661', jcn:'VMM365-26-0931', qty:1, daysAgo:8  },
+      { type:'issue',   nsn:'4730014482680', buno:'168019', jcn:'VMM365-26-0910', qty:1, daysAgo:12 },
+      { type:'issue',   nsn:'9150014728391', buno:'166490', jcn:'VMM365-26-0820', qty:2, daysAgo:30 },
+      { type:'issue',   nsn:'5365001849302', buno:'168661', jcn:'VMM365-26-0931', qty:4, daysAgo:8  },
+      { type:'issue',   nsn:'5340001023847', buno:'169017', jcn:'VMM365-26-0841', qty:6, daysAgo:20 },
+      { type:'issue',   nsn:'2915011234567', buno:'169354', jcn:'VMM365-26-0788', qty:1, daysAgo:45 },
+      { type:'issue',   nsn:'9150014728391', buno:'168661', jcn:'VMM365-26-0756', qty:4, daysAgo:60 },
       { type:'receipt', nsn:'9150014728391', buno:null,     jcn:null,               qty:4, daysAgo:43 },
       { type:'receipt', nsn:'5365001849302', buno:null,     jcn:null,               qty:50,daysAgo:90 },
-      { type:'issue',   nsn:'5975013847291', buno:'168019', jcn:'VMM365-2024-0801', qty:1, daysAgo:31 },
-      { type:'issue',   nsn:'4730014482680', buno:'166490', jcn:'VMM365-2024-0820', qty:2, daysAgo:32 },
+      { type:'issue',   nsn:'5975013847291', buno:'168019', jcn:'VMM365-26-0801', qty:1, daysAgo:31 },
+      { type:'issue',   nsn:'4730014482680', buno:'166490', jcn:'VMM365-26-0820', qty:2, daysAgo:32 },
     ];
     for (const tx of txData) {
       const acId = tx.buno ? acIds[tx.buno] : null;
