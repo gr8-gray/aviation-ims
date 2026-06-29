@@ -1,5 +1,6 @@
 'use strict';
-require('dotenv').config();
+// Load .env from repo root regardless of cwd (npm run dev sets cwd to server/).
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const helmet = require('helmet');
 const pool = require('./db/pool');
