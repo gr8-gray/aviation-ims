@@ -10,6 +10,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../..', '.env'
 const { Client, Pool } = require('pg');
 const fs   = require('fs');
 const path = require('path');
+const { DEV_EDIPI } = require('../lib/constants');
 
 const DB_NAME = process.env.DB_NAME || 'aviation_ims';
 const DB_USER = process.env.DB_USER || 'postgres';
@@ -45,20 +46,23 @@ async function setup() {
   // ── Step 2: Run migration ────────────────────────────────────────
   const pool = new Pool({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS, database: DB_NAME });
 
-  console.log('📋 Running migration 001_create_tables.sql...');
-  const migrationPath = path.join(__dirname, 'migrations', '001_create_tables.sql');
-  const sql = fs.readFileSync(migrationPath, 'utf8');
-
-  try {
-    await pool.query(sql);
-    console.log('   Migration complete.\n');
-  } catch (err) {
-    if (err.message.includes('already exists')) {
-      console.log('   Tables already exist — skipping migration.\n');
-    } else {
-      console.error('❌ Migration failed:', err.message);
-      await pool.end();
-      process.exit(1);
+  // Run ALL migrations in order (previously only 001 ran — 002-004 were skipped).
+  const migrationsDir = path.join(__dirname, 'migrations');
+  const migrationFiles = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of migrationFiles) {
+    console.log(`📋 Running migration ${file}...`);
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    try {
+      await pool.query(sql);
+      console.log('   Migration complete.\n');
+    } catch (err) {
+      if (err.message.includes('already exists')) {
+        console.log('   Objects already exist — skipping.\n');
+      } else {
+        console.error(`❌ Migration ${file} failed:`, err.message);
+        await pool.end();
+        process.exit(1);
+      }
     }
   }
 
@@ -91,9 +95,9 @@ async function setup() {
     // Dev user
     const userR = await client.query(
       `INSERT INTO users (edipi, name, rank, role, unit_id)
-       VALUES ('0000000001','GRAY, ERIC M.','SSgt','admin',$1)
+       VALUES ($2,'GRAY, ERIC M.','SSgt','admin',$1)
        ON CONFLICT (edipi) DO UPDATE SET role='admin', unit_id=$1
-       RETURNING user_id`, [primaryUnitId]
+       RETURNING user_id`, [primaryUnitId, DEV_EDIPI]
     );
     const devUserId = userR.rows[0].user_id;
     await client.query(
@@ -103,7 +107,7 @@ async function setup() {
          ('0000000004','DAVIS, TYLER B.','GySgt','officer',$1)
        ON CONFLICT (edipi) DO NOTHING`, [primaryUnitId]
     );
-    console.log(`   Users: 4 (admin EDIPI 0000000001, user_id=${devUserId})`);
+    console.log(`   Users: 4 (admin EDIPI ${DEV_EDIPI}, user_id=${devUserId})`);
 
     // Parts
     const parts = [
