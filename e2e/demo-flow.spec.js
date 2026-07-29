@@ -69,7 +69,8 @@ test.describe('demo flow — dashboard', () => {
     // would race the "Loading dashboard…" state.
     const docCells = page.getByText(/M00365\d{7}/);
     await expect(docCells.first()).toBeVisible();
-    expect(await docCells.count()).toBeGreaterThanOrEqual(3);
+    // Poll: a snapshot count can sample mid-re-render and briefly read 0.
+    await expect.poll(() => docCells.count()).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -100,7 +101,8 @@ test.describe('demo flow — requisitions drill-down', () => {
     // Seeded open documents (6 open of 7 total) — at least 3 doc numbers visible.
     const docs = table.getByText(/M00365\d{7}/);
     await expect(docs.first()).toBeVisible();
-    expect(await docs.count()).toBeGreaterThanOrEqual(3);
+    // Poll: a snapshot count can sample mid-re-render and briefly read 0.
+    await expect.poll(() => docs.count()).toBeGreaterThanOrEqual(3);
     // Status values from the seed set.
     await expect(table.getByText(/backordered/i).first()).toBeVisible();
   });
