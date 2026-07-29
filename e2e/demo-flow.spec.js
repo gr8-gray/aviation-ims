@@ -13,8 +13,9 @@ const { test, expect } = require('@playwright/test');
  * Vite :5173 → Express :3000 (DEV_AUTH=true) → seeded Postgres.
  *
  * Seed contract (server/db/seeds/seed.js): VMM-365, 5 MV-22B airframes,
- * BUNO 166490 grounded with an open NMCS event (JCN V365-24-0892),
- * 169017 PMCS, 6 open requisitions with M00365-prefixed document numbers.
+ * BUNO 166490 grounded with an open NMCS event (JCN serial 0892 — the UI
+ * renders JCNs in unit/FY format, e.g. VMM365-26-0892), 169017 PMCS,
+ * 6 open requisitions with M00365-prefixed document numbers.
  *
  * Note: there is no login form (CAC/dev-header auth) — no credential fields
  * exist in this app, and these tests deliberately take no screenshots.
@@ -54,14 +55,20 @@ test.describe('demo flow — dashboard', () => {
     await expect(nmcsTable).toBeVisible();
     await expect(nmcsTable).toContainText('166490'); // grounded BUNO
     await expect(nmcsTable).toContainText('MV-22B');
-    await expect(nmcsTable).toContainText('V365-24-0892'); // NMCS JCN from seed
+    await expect(nmcsTable).toContainText('2840018374920'); // NSN of the grounding part
+    // JCN serial 0892 — the UI renders the JCN in unit/FY format (e.g. VMM365-26-0892),
+    // so assert the stable serial rather than the raw seeded string.
+    await expect(nmcsTable).toContainText(/0892/);
   });
 
   test('open requisitions table lists MILSTRIP document numbers', async ({ page }) => {
     await page.goto('/');
 
     // M00365 (VMM-365 UIC) + 5-digit julian date + 4-digit serial.
+    // first() auto-waits for the dashboard fetch to finish; a bare count()
+    // would race the "Loading dashboard…" state.
     const docCells = page.getByText(/M00365\d{7}/);
+    await expect(docCells.first()).toBeVisible();
     expect(await docCells.count()).toBeGreaterThanOrEqual(3);
   });
 });
@@ -88,7 +95,9 @@ test.describe('demo flow — requisitions drill-down', () => {
     await expect(page).toHaveURL(/\/requisitions/);
 
     // Seeded open documents (6 open of 7 total) — at least 3 doc numbers visible.
-    expect(await page.getByText(/M00365\d{7}/).count()).toBeGreaterThanOrEqual(3);
+    const docs = page.getByText(/M00365\d{7}/);
+    await expect(docs.first()).toBeVisible();
+    expect(await docs.count()).toBeGreaterThanOrEqual(3);
     // Status badges from the seed set.
     await expect(page.getByText(/backordered/i).first()).toBeVisible();
   });
