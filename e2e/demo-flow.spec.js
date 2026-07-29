@@ -94,12 +94,15 @@ test.describe('demo flow — requisitions drill-down', () => {
     await page.getByRole('link', { name: 'Requisitions' }).click();
     await expect(page).toHaveURL(/\/requisitions/);
 
+    // Scope to the table — the status-filter <select> also contains these
+    // strings as (hidden) options.
+    const table = page.locator('table');
     // Seeded open documents (6 open of 7 total) — at least 3 doc numbers visible.
-    const docs = page.getByText(/M00365\d{7}/);
+    const docs = table.getByText(/M00365\d{7}/);
     await expect(docs.first()).toBeVisible();
     expect(await docs.count()).toBeGreaterThanOrEqual(3);
-    // Status badges from the seed set.
-    await expect(page.getByText(/backordered/i).first()).toBeVisible();
+    // Status values from the seed set.
+    await expect(table.getByText(/backordered/i).first()).toBeVisible();
   });
 });
 
