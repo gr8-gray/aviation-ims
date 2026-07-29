@@ -1,5 +1,6 @@
 'use strict';
 const pool = require('../db/pool');
+const { DEV_EDIPI } = require('../lib/constants');
 
 /**
  * Extract EDIPI from CAC certificate SAN or CN.
@@ -28,7 +29,7 @@ async function requireAuth(req, res, next) {
     let edipi;
 
     if (process.env.DEV_AUTH === 'true') {
-      edipi = req.headers['x-dev-edipi'] || '0000000001';
+      edipi = req.headers['x-dev-edipi'] || DEV_EDIPI;
     } else {
       const cert = req.socket && req.socket.getPeerCertificate
         ? req.socket.getPeerCertificate(true)

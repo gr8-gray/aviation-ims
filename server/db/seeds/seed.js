@@ -11,6 +11,7 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '../../..', '.env') });
 const pool = require('../pool');
+const { DEV_EDIPI } = require('../../lib/constants');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -122,14 +123,14 @@ async function seed() {
     const primaryUnitId = unitIds['M00365'];
     console.log(`     ${UNITS.length} units (primary unit_id=${primaryUnitId})`);
 
-    // 2. Dev user (matches DEV_AUTH EDIPI 0000000001)
+    // 2. Dev user (matches DEV_AUTH fallback EDIPI — see server/lib/constants.js)
     console.log('  → Dev user...');
     const userResult = await client.query(
       `INSERT INTO users (edipi, name, rank, role, unit_id)
-       VALUES ('0000000001','GRAY, ERIC M.','SSgt','admin',$1)
+       VALUES ($2,'GRAY, ERIC M.','SSgt','admin',$1)
        ON CONFLICT (edipi) DO UPDATE SET role='admin', unit_id=$1, name='GRAY, ERIC M.'
        RETURNING user_id`,
-      [primaryUnitId]
+      [primaryUnitId, DEV_EDIPI]
     );
     const devUserId = userResult.rows[0].user_id;
 
@@ -147,7 +148,7 @@ async function seed() {
         [c.edipi, c.name, c.rank, c.role, primaryUnitId]
       );
     }
-    console.log(`     4 users (dev admin EDIPI 0000000001, user_id=${devUserId})`);
+    console.log(`     4 users (dev admin EDIPI ${DEV_EDIPI}, user_id=${devUserId})`);
 
     // 3. Parts master
     console.log('  → Parts master...');
@@ -326,7 +327,7 @@ async function seed() {
     console.log('  Reqs:     7 (2 backordered, 1 NMCS P01, 1 overdue relay)');
     console.log('  NMCS:     2 open (166490 NMCS 18d, 169017 PMCS 22d)');
     console.log('  Low stock: O-rings (1 on hand, reorder=5), relay (0 on hand)');
-    console.log('\n  Dev login: EDIPI 0000000001 (DEV_AUTH=true, role=admin)');
+    console.log(`\n  Dev login: EDIPI ${DEV_EDIPI} (DEV_AUTH=true, role=admin)`);
     console.log('  Dashboard will show: 1 NMCS, 6 open reqs, 2 low stock\n');
 
   } catch (err) {

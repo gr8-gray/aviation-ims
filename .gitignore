@@ -3,7 +3,15 @@ node_modules/
 *.key
 *.crt
 *.pem
+*.p12
+certs/
 dist/
 build/
 output/
 .DS_Store
+
+# Playwright output (never commit reports/traces or any generated state)
+test-results/
+playwright-report/
+blob-report/
+/.playwright/
