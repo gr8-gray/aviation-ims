@@ -37,7 +37,7 @@ Note: `server/db/setup.js` duplicates the seed logic of `server/db/seeds/seed.js
 
 What every walkthrough follows, and what E2E pins:
 
-1. **Dashboard** (`/`) — KPI cards (NMCS Aircraft, Open Reqs, Due-In Today, Low Stock), NMCS/PMCS board, open requisitions table. Seed scenario: BUNO 166490 grounded 18d (NMCS, JCN V365-24-0892), 169017 PMCS, 6 open reqs.
+1. **Dashboard** (`/`) — KPI cards (NMCS Aircraft, Open Reqs, Due-In Today, Low Stock), NMCS/PMCS board, open requisitions table. Seed scenario: BUNO 166490 grounded 18d (NMCS, JCN serial 0892 — UI renders JCNs in unit/FY format, e.g. VMM365-26-0892), 169017 PMCS, 6 open reqs.
 2. **Aircraft** (`/aircraft`) — 5 seeded MV-22B airframes, grounded state visible.
 3. **Requisitions** (`/requisitions`) — M00365-prefixed MILSTRIP document numbers, status badges.
 
