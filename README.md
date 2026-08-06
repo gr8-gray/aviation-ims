@@ -4,6 +4,12 @@
 
 ---
 
+## Forward-deployed context
+
+I didn't build this from a spec handed to me — I built it from six years *inside* the workflow. USMC Aviation Supply Technician on the V-22 flightline (VMM-265, Okinawa), then Navy aviation supply chain at V2X. Every entity in this system — NMCS states, ICRL induction, MILSTRIP document numbers, the AWOP board — is something I worked by hand before I encoded it. That is the forward-deployed pattern: embed in the customer's domain, learn the real workflow, ship the tool the field actually needs.
+
+---
+
 ## What it covers
 
 The system encodes 6+ years of aviation supply chain domain knowledge:
