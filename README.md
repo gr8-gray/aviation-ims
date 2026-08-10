@@ -31,7 +31,7 @@ Seed data: VMM-365 squadron, 5 MV-22B airframes, one grounded scenario. Fictiona
 | Frontend | React 19 · Vite 8 · React Router 7 · Axios |
 | Backend | Node.js · Express · Helmet · Multer · ExcelJS |
 | Database | PostgreSQL — Dockerized |
-| Test | Playwright (E2E screenshots) |
+| Test | Playwright (single happy-path demo spec, ~6 tests) |
 
 7 backend route modules: `aircraft`, `inventory`, `parts`, `repairables`, `requisitions`, `reports`, `users`.
 7 frontend pages with deep-space palette and role-aware navigation.
@@ -80,7 +80,7 @@ cd client && npm run dev    # Vite on :5173
 
 ## Status
 
-Phases 1-6 complete: DB schema, FLIS client, MILSTRIP generator, aircraft/NMCS, inventory/repairables/ICRL, reports/users. Frontend fully implemented.
+Demo / local full-stack build (not fielded). Phases 1-6 complete: DB schema, FLIS client, MILSTRIP generator, aircraft/NMCS, inventory/repairables/ICRL, reports/users. Frontend fully implemented.
 
 Roadmap: optical tracking system (OTS) sync — currently stubbed pending live spec.
 
